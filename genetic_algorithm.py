@@ -2,71 +2,79 @@ import random
 from chromosome import Chromosome
 
 class GeneticAlgorithm():
-    def __init__(self, Func, PopSize = 50, GenLimit = 100, TournamentSize = 2, Elite = 5,
+
+    def __init__(self, fitness_function, population_size = 50, GenLimit = 100, tournament_size = 2, elite = 5,
                  xmin = -50, xmax = 50, ymin = -50, ymax = 50):
-        self.Func = Func
-        self.PopSize = PopSize
-        self.TournamentSize = TournamentSize
-        self.Elite = Elite
+        self.fitness_function = fitness_function
+        self.population_size = population_size
+        self.tournament_size = tournament_size
+        self.elite = elite
         self.GenLimit = GenLimit
-        self.Population = []
-        self.TemporaryPopulation = [0 for i in range(2*PopSize)]
-        self.PopulationInit(xmin, xmax, ymin, ymax)
-        self.History = []
+        self.population = []
+        self.temporary_population = [0 for i in range(2*population_size)]
+        self.initialize_population(xmin, xmax, ymin, ymax)
+        self.history = {
+            'chromosomes': [],
+            'fitness_function': []
+        }
     
-    def Run(self):
-        self.EvaluateFF(self.Population)
-        self.History.append(self.MeanFF())
+    def run(self):
+        self.evaluate_fitness_for_each_chromosome_in(self.population)
+        self.add_to_history()
         for i in range(self.GenLimit):
-            self.Offsprings()
-            self.Mutation()
-            self.EvaluateFF(self.TemporaryPopulation)
-            self.NewPopulation()
-            self.History.append(self.MeanFF())
+            self.generate_child_population()
+            self.mutate_child_population()
+            self.evaluate_fitness_for_each_chromosome_in(self.temporary_population)
+            self.produce_next_generation()
+            self.add_to_history()
+
+    def add_to_history(self):
+        mean_ff = self.calculate_mean_fitness_in_population()
+        top_ten_chromosomes = tuple(chromo.genes for chromo in self.population[:10])
+        self.history['fitness_function'].append(mean_ff)
+        self.history['chromosomes'].append(top_ten_chromosomes)
     
-    def PopulationInit(self, xmin, xmax, ymin, ymax):
-        for i in range(self.PopSize):
-            self.Population.append(Chromosome(self.Func))
-            self.Population[i].RandInst(xmin, xmax, ymin, ymax)
+    def initialize_population(self, xmin, xmax, ymin, ymax):
+        for i in range(self.population_size):
+            self.population.append(Chromosome(self.fitness_function))
+            self.population[i].RandInst(xmin, xmax, ymin, ymax)
     
-    def EvaluateFF(self, Pop):
-        for i in range(len(Pop)):
-            Pop[i].FF()
+    def evaluate_fitness_for_each_chromosome_in(self, population):
+        for chromosome in population:
+            chromosome.FF()
     
-    def Selection(self):
-        Candidates = random.choices(self.Population, k=self.TournamentSize)
+    def select_parent(self):
+        Candidates = random.choices(self.population, k=self.tournament_size)
         best = 0
         for i in range(len(Candidates)):
             if Candidates[i].FF() < Candidates[best].FF():
                 best = i
         return Candidates[best]
         
-    def Offsprings(self):
-        for i in range(self.PopSize):
-            parent1 = self.Selection()
-            parent2 = self.Selection()
+    def generate_child_population(self):
+        for i in range(self.population_size):
+            parent1 = self.select_parent()
+            parent2 = self.select_parent()
             child1, child2 = parent1.Crossover(parent2)
-            self.TemporaryPopulation[i] = child1
-            self.TemporaryPopulation[i+self.PopSize] = child2
+            self.temporary_population[i] = child1
+            self.temporary_population[i+self.population_size] = child2
             
-    def Mutation(self):
-        for i in range(len(self.TemporaryPopulation)):
-            self.TemporaryPopulation[i].Mutate(1)
+    def mutate_child_population(self):
+        for i in range(len(self.temporary_population)):
+            self.temporary_population[i].Mutate(1)
     
-    def NewPopulation(self):
-        sorted(self.Population, key = lambda x: x.FF())
-        sorted(self.TemporaryPopulation, key = lambda x: x.FF())
+    def produce_next_generation(self):
+        sorted(self.population, key = lambda x: x.FF())
+        sorted(self.temporary_population, key = lambda x: x.FF())
         j=0
-        for i in range(self.Elite):
-            if self.Population[i].FF() > self.TemporaryPopulation[j].FF():
-                self.Population[i] = self.TemporaryPopulation[j]
+        for i in range(self.elite):
+            if self.population[i].FF() > self.temporary_population[j].FF():
+                self.population[i] = self.temporary_population[j]
                 j+=1
-        for i in range(self.Elite, self.PopSize):
-            self.Population[i] = self.TemporaryPopulation[j]
+        for i in range(self.elite, self.population_size):
+            self.population[i] = self.temporary_population[j]
             j+=1
             
-    def MeanFF(self):
-        SumFF = 0
-        for i in range(len(self.Population)):
-            SumFF = self.Population[i].FF()
-        return SumFF/len(self.Population)
+    def calculate_mean_fitness_in_population(self):
+        total_fitness = sum([chromosome.FF() for chromosome in self.population])
+        return total_fitness/len(self.population)

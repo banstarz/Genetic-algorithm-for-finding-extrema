@@ -24,3 +24,7 @@ class Chromosome():
         if self.fitness is None:
             self.fitness = self.Func(self.x, self.y)
         return self.fitness
+
+    @property
+    def genes(self):
+        return (self.x, self.y)
