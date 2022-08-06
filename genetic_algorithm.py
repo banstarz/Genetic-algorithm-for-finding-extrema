@@ -37,17 +37,17 @@ class GeneticAlgorithm():
     def initialize_population(self, xmin, xmax, ymin, ymax):
         for i in range(self.population_size):
             self.population.append(Chromosome(self.fitness_function))
-            self.population[i].RandInst(xmin, xmax, ymin, ymax)
+            self.population[i].random_initialization((xmin, xmax), (ymin, ymax))
     
     def evaluate_fitness_for_each_chromosome_in(self, population):
         for chromosome in population:
-            chromosome.FF()
+            chromosome.fitness_value
     
     def select_parent(self):
         Candidates = random.choices(self.population, k=self.tournament_size)
         best = 0
         for i in range(len(Candidates)):
-            if Candidates[i].FF() < Candidates[best].FF():
+            if Candidates[i].fitness_value < Candidates[best].fitness_value:
                 best = i
         return Candidates[best]
         
@@ -55,20 +55,20 @@ class GeneticAlgorithm():
         for i in range(self.population_size):
             parent1 = self.select_parent()
             parent2 = self.select_parent()
-            child1, child2 = parent1.Crossover(parent2)
+            child1, child2 = parent1.crossover(parent2)
             self.temporary_population[i] = child1
             self.temporary_population[i+self.population_size] = child2
             
     def mutate_child_population(self):
         for i in range(len(self.temporary_population)):
-            self.temporary_population[i].Mutate(1)
+            self.temporary_population[i].mutate(1)
     
     def produce_next_generation(self):
-        sorted(self.population, key = lambda x: x.FF())
-        sorted(self.temporary_population, key = lambda x: x.FF())
+        sorted(self.population, key = lambda x: x.fitness_value)
+        sorted(self.temporary_population, key = lambda x: x.fitness_value)
         j=0
         for i in range(self.elite):
-            if self.population[i].FF() > self.temporary_population[j].FF():
+            if self.population[i].fitness_value > self.temporary_population[j].fitness_value:
                 self.population[i] = self.temporary_population[j]
                 j+=1
         for i in range(self.elite, self.population_size):
@@ -76,5 +76,5 @@ class GeneticAlgorithm():
             j+=1
             
     def calculate_mean_fitness_in_population(self):
-        total_fitness = sum([chromosome.FF() for chromosome in self.population])
+        total_fitness = sum([chromosome.fitness_value for chromosome in self.population])
         return total_fitness/len(self.population)
